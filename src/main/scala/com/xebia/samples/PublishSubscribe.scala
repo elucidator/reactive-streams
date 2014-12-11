@@ -15,7 +15,7 @@ import akka.stream.FlowMaterializer
 class IntPublisher extends Actor with ActorPublisher[Int] {
   val random = scala.util.Random
   override def receive: Receive = {
-    case ActorPublisherMessage.Request(elements) => {
+    case ActorPublisherMessage.Request(elements) ⇒ {
       println(s"demand is: $elements")
       while (totalDemand > 0) {
         onNext(random.nextInt(80))
@@ -29,7 +29,7 @@ class PrintSubscriber extends Actor with ActorSubscriber {
   val random = scala.util.Random
   override val requestStrategy = WatermarkRequestStrategy(200)
   override def receive: Receive = {
-    case ActorSubscriberMessage.OnNext(msg) => {
+    case ActorSubscriberMessage.OnNext(msg) ⇒ {
       Thread.sleep(200)
       println(s"next is: $msg")
     }

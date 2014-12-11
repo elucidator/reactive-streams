@@ -15,16 +15,16 @@ object SocketClientTester extends App {
     tester.sendAndForget("reset\n")
     val (elapsed, _) = measure {
       //1 to to foreach (_ => tester.sendAndForget(s"$i$longMsg"))
-      1 to to foreach (_ => tester.sendAndReceive(msg))
+      1 to to foreach (_ ⇒ tester.sendAndReceive(msg))
     }
     println(s"=====================> Total sent: $to, elapsed $elapsed ms, tps ${to / elapsed * 1000}")
     Thread.sleep(2000)
     tester.close()
   } catch {
-    case e: Throwable => e.printStackTrace()
+    case e: Throwable ⇒ e.printStackTrace()
   }
 
-  private def measure[T](callback: => T): (Long, T) = {
+  private def measure[T](callback: ⇒ T): (Long, T) = {
     val start = System.currentTimeMillis
     val res = callback
     val elapsed = System.currentTimeMillis - start
@@ -43,18 +43,18 @@ class SimpleSocketClient(val host: String = "localhost", val port: Int = 11111) 
     socket.connect(adr)
     socket
   }
-  
+
   def sendAndReceive(msg: String, times: Int = 1): String = {
     try {
       val out = new PrintWriter(new OutputStreamWriter(vcmdSocket.getOutputStream(), "utf-8"), true);
       val in = new BufferedReader(new InputStreamReader(vcmdSocket.getInputStream(), "utf-8"));
       out.println(msg)
-      val res = (1 to times) map { c =>
+      val res = (1 to times) map { c ⇒
         Option(in.readLine()).getOrElse(throw new SocketReadException)
       }
       res.reverse.head
     } catch {
-      case e: Throwable =>
+      case e: Throwable ⇒
         println(e.getClass().getName() + " " + e.getMessage())
         throw e
     }
