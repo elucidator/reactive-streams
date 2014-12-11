@@ -75,7 +75,7 @@ class EchoConnectionHandler(remote: InetSocketAddress, connection: ActorRef, del
 
   //delays when delay is set
   private def replyHandler(text: String, actorRef: ActorRef): Unit = delayCfg.map { delay =>
-    context.system.scheduler.scheduleOnce(100 milliseconds, actorRef, Tcp.Write(ByteString(text)))
+    context.system.scheduler.scheduleOnce(delay milliseconds, actorRef, Tcp.Write(ByteString(text)))
   } getOrElse {
     actorRef ! Tcp.Write(ByteString(text))
   }
