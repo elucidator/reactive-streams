@@ -27,23 +27,12 @@ object TcpEcho {
    *
    */
   def main(args: Array[String]): Unit = {
-    if (args.isEmpty) {
-      val system = ActorSystem("ClientAndServer")
-      val serverAddress = new InetSocketAddress("127.0.0.1", 6000)
-      server(system, serverAddress)
-      client(system, serverAddress)
-    } else {
-      val serverAddress =
-        if (args.length == 3) new InetSocketAddress(args(1), args(2).toInt)
-        else new InetSocketAddress("127.0.0.1", 6000)
-      if (args(0) == "server") {
-        val system = ActorSystem("Server")
-        server(system, serverAddress)
-      } else if (args(0) == "client") {
-        val system = ActorSystem("Client")
-        client(system, serverAddress)
-      }
-    }
+    val system = ActorSystem("ClientAndServer")
+    val serverAddress = if (args.isEmpty)
+      new InetSocketAddress("127.0.0.1", 6000)
+    else
+      new InetSocketAddress("127.0.0.1", args(0).toInt)
+    server(system, serverAddress)
   }
 
   def server(system: ActorSystem, serverAddress: InetSocketAddress): Unit = {
@@ -76,7 +65,7 @@ object TcpEcho {
       StreamTcp()
         .outgoingConnection(endPointAdres).flow
         .map(b => {
-          ByteString(b.utf8String + "\n")
+        ByteString(b.utf8String + "\n")
       })
     PartialFlowGraph { implicit b =>
       val balance = Balance[ByteString]
@@ -86,30 +75,9 @@ object TcpEcho {
 
       merge ~> UndefinedSink("out")
 
-      1 to 10 map { _ =>
+      1 to 100 map { _ =>
         balance ~> slowEndpoint ~> merge
       }
     } toFlow(UndefinedSource("in"), UndefinedSink("out"))
-  }
-
-  def client(system: ActorSystem, serverAddress: InetSocketAddress): Unit = {
-    implicit val sys = system
-    import system.dispatcher
-    implicit val materializer = FlowMaterializer()
-
-    val testInput = ('a' to 'z').map(ByteString(_))
-
-    val result = Source(testInput).via(StreamTcp().outgoingConnection(serverAddress).flow).
-      fold(ByteString.empty) { (acc, in) ⇒ acc ++ in}
-
-    result.onComplete {
-      case Success(result) =>
-        println(s"Result: " + result.utf8String)
-        println("Shutting down client")
-      //system.shutdown()
-      case Failure(e) =>
-        println("Failure: " + e.getMessage)
-      //system.shutdown()
-    }
   }
 }
