@@ -13,7 +13,7 @@ object LatencyEchoServer extends App {
 
   val system = ActorSystem("echo-service-system")
   val endpoint = new InetSocketAddress("localhost", 11111)
-  val delay = None //Option(100)
+  val delay = Option(10)
   system.actorOf(EchoService.props(endpoint, delay), "echo-service")
 
   io.StdIn.readLine(s"Hit ENTER to exit ...${System.getProperty("line.separator")}")
@@ -54,7 +54,7 @@ class EchoConnectionHandler(remote: InetSocketAddress, connection: ActorRef, del
   private def doReceive(replyHandler: (String, ActorRef) => Unit): Receive = {
     case Tcp.Received(data) =>
       val text = data.utf8String.trim
-      //println(s"Received '$text' from remote address $remote")
+//      println(s"Received '$text' from remote address $remote")
       text match {
         case "close" => context.stop(self)
         case "reset" =>
