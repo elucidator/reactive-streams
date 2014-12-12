@@ -48,4 +48,3 @@ object ItemMessage {
   def Empty: ItemMessage = ItemMessage("", "", "")
 }
 
-

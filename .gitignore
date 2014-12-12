@@ -2,6 +2,8 @@
 *.log
 .history
 
+bin/*/logs
+
 # sbt specific
 dist/*
 target/
