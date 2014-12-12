@@ -47,13 +47,15 @@ object ParallelProxy {
 
   val endPointAdres: InetSocketAddress = new InetSocketAddress("127.0.0.1", 11111)
 
+  private val numberOfConnections: Int = 20
+
   def getFlow()(implicit as: ActorSystem): Flow[ByteString, ByteString] = {
     PartialFlowGraph { implicit b =>
       val balance = Balance[ByteString]
       val merge = Merge[ByteString]
       UndefinedSource("in") ~> balance
 
-      1 to 20 map { _ =>
+      1 to numberOfConnections map { _ =>
         balance ~> StreamTcp().outgoingConnection(endPointAdres).flow ~> merge
       }
 
