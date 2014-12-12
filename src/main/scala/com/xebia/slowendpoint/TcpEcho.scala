@@ -58,25 +58,19 @@ object TcpEcho {
 
   }
 
-  def getFlow()(implicit as: ActorSystem): Flow[ByteString, ByteString] = {
-    val endPointAdres: InetSocketAddress = new InetSocketAddress("127.0.0.1", 11111);
+  val endPointAdres: InetSocketAddress = new InetSocketAddress("127.0.0.1", 11111)
 
-    val slowEndpoint: Flow[ByteString, ByteString]#Repr[ByteString] =
-      StreamTcp()
-        .outgoingConnection(endPointAdres).flow
-        .map(b => {
-        ByteString(b.utf8String + "\n")
-      })
+  def getFlow()(implicit as: ActorSystem): Flow[ByteString, ByteString] = {
     PartialFlowGraph { implicit b =>
       val balance = Balance[ByteString]
       val merge = Merge[ByteString]
       UndefinedSource("in") ~> balance
 
-      merge ~> UndefinedSink("out")
-
-      1 to 100 map { _ =>
-        balance ~> slowEndpoint ~> merge
+      1 to 20 map { _ =>
+        balance ~> StreamTcp().outgoingConnection(endPointAdres).flow ~> merge
       }
+
+      merge ~> UndefinedSink("out")
     } toFlow(UndefinedSource("in"), UndefinedSink("out"))
   }
 }
