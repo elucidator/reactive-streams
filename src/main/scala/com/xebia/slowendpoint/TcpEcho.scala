@@ -6,7 +6,9 @@ import akka.io.IO
 import akka.pattern.ask
 import akka.stream.FlowMaterializer
 import akka.stream.io.StreamTcp
-import akka.stream.scaladsl.{ Flow, ForeachSink, Sink, Source }
+import akka.stream.io.StreamTcp.IncomingConnection
+import akka.stream.scaladsl._
+import akka.stream.scaladsl.FlowGraphImplicits._
 import akka.util.ByteString
 //import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
@@ -49,13 +51,20 @@ object TcpEcho {
     implicit val materializer = FlowMaterializer()
     val endPointAdres: InetSocketAddress = new InetSocketAddress("127.0.0.1", 11111);
 
-    val handler = ForeachSink[StreamTcp.IncomingConnection] { conn =>
+    val binding = StreamTcp().bind(serverAddress)
+
+    val source: Source[IncomingConnection] = binding.connections
+    val sink: ForeachSink[IncomingConnection] = ForeachSink[IncomingConnection] { conn =>
       println("Client connected from: " + conn.remoteAddress)
       conn handleWith getFlow(endPointAdres)
     }
 
-    val binding = StreamTcp().bind(serverAddress)
-    val materializedServer = binding.connections.to(handler).run()
+    val materializedServer = FlowGraph { implicit b ⇒
+//      val bcast = Broadcast[T]
+//      val merge = Merge[T]
+
+      source ~> sink
+    }.run()
 
     binding.localAddress(materializedServer).onComplete {
       case Success(address) =>
@@ -67,7 +76,7 @@ object TcpEcho {
 
   }
 
-  def getFlow(endPointAdres: InetSocketAddress): Flow[ByteString, ByteString] = {
+  def getFlow(endPointAdres: InetSocketAddress)(implicit as: ActorSystem): Flow[ByteString, ByteString] = {
     Flow[ByteString]
       .map { i => println(i.utf8String); i}
       .via(StreamTcp()
