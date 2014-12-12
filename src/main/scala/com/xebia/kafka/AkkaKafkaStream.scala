@@ -15,28 +15,28 @@ object AkkaKafkaStream extends App {
   val ZookeeperConnect = "localhost:2181"
 
   implicit val system = ActorSystem("akka-kafka-stream")
-
   implicit val materializer = FlowMaterializer()
 
   val kafkaConsumer = KafkaConsumer(Topic, GroupID, ZookeeperConnect)
+  val kafkaSource = Source(() ⇒ readMessageFromKafka())
+  val result = kafkaSource.map(parseMessage).foreach(println)
 
-  Source(() ⇒ readMessageFromKafka())
-    .map(parseMessage)
-    .foreach(println)
-    .onComplete(_ ⇒ system.shutdown())
+  result.onComplete {
+    case _ ⇒
+      println("Shutting down client")
+      system.shutdown()
+  }
 
   private def readMessageFromKafka() = kafkaConsumer.read()
 
   private def parseMessage(msg: MessageAndMetadata[Long, ByteString]): ItemMessage = {
-    println(s"raw message: ${msg.message}")
     val message = msg.message.decodeString("utf-8")
     try {
-      println(s"decoded message: $message")
       message.parseJson.convertTo[ItemMessage](ItemMessage.itemMessageFormat)
     } catch {
       case e: Exception ⇒
         println(s"Exception encountered while trying to convert Kafka message to ItemMessage. Raw message: $message", e)
-        throw e
+        ItemMessage.Empty // Hack so the flow keeps working after an exception
     }
   }
 
@@ -45,9 +45,10 @@ object AkkaKafkaStream extends App {
 case class ItemMessage(id: String, title: String, price: String)
 
 object ItemMessage {
-
   import spray.json.DefaultJsonProtocol._
 
   implicit val itemMessageFormat = jsonFormat3(ItemMessage.apply)
+
+  def Empty: ItemMessage = ItemMessage("", "", "")
 }
 

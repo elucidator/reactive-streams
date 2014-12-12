@@ -20,6 +20,8 @@ scalacOptions := Seq("-encoding", "utf8",
 val akkaVersion = "2.3.7"
 val sprayVersion = "1.3.2"
 
+mainClass := Some("com.xebia.kafka.AkkaKafkaStream")
+
 libraryDependencies ++= Seq(
     "com.typesafe.akka"         %% "akka-actor"                     % akkaVersion,
     "com.typesafe.akka"         %% "akka-slf4j"                     % akkaVersion,

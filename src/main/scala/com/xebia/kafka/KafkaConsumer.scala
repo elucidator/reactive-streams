@@ -2,6 +2,7 @@ package com.xebia.kafka
 
 import java.util.Properties
 
+import akka.util.ByteString
 import com.xebia.kafka.decoders._
 import kafka.consumer.{ Consumer, ConsumerConfig, Whitelist }
 
@@ -24,7 +25,16 @@ class KafkaConsumer(topic: String,
 
   val stream = connector.createMessageStreamsByFilter(filterSpec, 1, LongDecoder, ByteStringDecoder).get(0)
 
-  def read() = ConsumerIteratorWrapper(stream.iterator())
+  def read(): ConsumerIteratorWrapper[Long, ByteString] = {
+    try {
+      ConsumerIteratorWrapper(stream.iterator())
+    } catch {
+      case e: Throwable ⇒ {
+        println("CRASH!")
+        throw e
+      }
+    }
+  }
 
   def close() {
     connector.shutdown()
