@@ -51,7 +51,7 @@ object TcpEcho {
 
     val handler = ForeachSink[StreamTcp.IncomingConnection] { conn =>
       println("Client connected from: " + conn.remoteAddress)
-      conn handleWith Flow[ByteString].map { i => println(i.utf8String); i }.via(StreamTcp().outgoingConnection(endPointAdres).flow.map(b => ByteString(b.utf8String + "\n")))
+      conn handleWith getFlow(endPointAdres)
     }
 
     val binding = StreamTcp().bind(serverAddress)
@@ -65,6 +65,15 @@ object TcpEcho {
         system.shutdown()
     }
 
+  }
+
+  def getFlow(endPointAdres: InetSocketAddress): Flow[ByteString, ByteString] = {
+    Flow[ByteString]
+      .map { i => println(i.utf8String); i}
+      .via(StreamTcp()
+        .outgoingConnection(endPointAdres).flow
+        .map(b => ByteString(b.utf8String + "\n"))
+      )
   }
 
   def client(system: ActorSystem, serverAddress: InetSocketAddress): Unit = {
