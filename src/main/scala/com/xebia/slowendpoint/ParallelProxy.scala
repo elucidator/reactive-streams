@@ -10,22 +10,10 @@ import akka.stream.scaladsl._
 import akka.stream.scaladsl.FlowGraphImplicits._
 import akka.util.ByteString
 
-//import scala.concurrent.duration._
-
 import scala.util.{Failure, Success}
 
-object TcpEcho {
+object ParallelProxy {
 
-  /**
-   * Use without parameters to start both client and
-   * server.
-   *
-   * Use parameters `server 0.0.0.0 6001` to start server listening on port 6001.
-   *
-   * Use parameters `client 127.0.0.1 6001` to start client connecting to
-   * server on 127.0.0.1:6001.
-   *
-   */
   def main(args: Array[String]): Unit = {
     val system = ActorSystem("ClientAndServer")
     val serverAddress = if (args.isEmpty)
@@ -55,7 +43,6 @@ object TcpEcho {
         println(s"Server could not bind to $serverAddress: ${e.getMessage}")
         system.shutdown()
     }
-
   }
 
   val endPointAdres: InetSocketAddress = new InetSocketAddress("127.0.0.1", 11111)
