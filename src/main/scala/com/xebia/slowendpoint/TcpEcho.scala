@@ -81,7 +81,6 @@ object TcpEcho {
     PartialFlowGraph { implicit b =>
       val balance = Balance[ByteString]
       val merge = Merge[ByteString]
-      val empty = Flow.empty[ByteString]
       UndefinedSource("in") ~> balance
 
       merge ~> UndefinedSink("out")
