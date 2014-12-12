@@ -1,13 +1,11 @@
 package com.xebia.kafka
 
 import akka.actor._
-import akka.stream.FlowMaterializer
+import akka.stream.{ OverflowStrategy, FlowMaterializer }
 import akka.stream.scaladsl._
 import akka.util.ByteString
 import kafka.message.MessageAndMetadata
 import spray.json._
-
-import scala.concurrent.ExecutionContext.Implicits.global
 
 object AkkaKafkaStream extends App {
   val Topic = "item-topic"
@@ -18,14 +16,11 @@ object AkkaKafkaStream extends App {
   implicit val materializer = FlowMaterializer()
 
   val kafkaConsumer = KafkaConsumer(Topic, GroupID, ZookeeperConnect)
-  val kafkaSource = Source(() ⇒ readMessageFromKafka())
-  val result = kafkaSource.map(parseMessage).foreach(println)
 
-  result.onComplete {
-    case _ ⇒
-      println("Shutting down client")
-      system.shutdown()
-  }
+  Source(() ⇒ readMessageFromKafka())
+    .buffer(2, OverflowStrategy.dropHead)
+    .map(parseMessage)
+    .foreach(println)
 
   private def readMessageFromKafka() = kafkaConsumer.read()
 
@@ -45,10 +40,12 @@ object AkkaKafkaStream extends App {
 case class ItemMessage(id: String, title: String, price: String)
 
 object ItemMessage {
+
   import spray.json.DefaultJsonProtocol._
 
   implicit val itemMessageFormat = jsonFormat3(ItemMessage.apply)
 
   def Empty: ItemMessage = ItemMessage("", "", "")
 }
+
 
