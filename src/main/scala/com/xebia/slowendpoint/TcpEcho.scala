@@ -75,14 +75,20 @@ object TcpEcho {
     val slowEndpoint: Flow[ByteString, ByteString]#Repr[ByteString] =
       StreamTcp()
         .outgoingConnection(endPointAdres).flow
-        .map(b => ByteString(b.utf8String + "\n"))
+        .map(b => {
+          ByteString(b.utf8String + "\n")
+      })
     PartialFlowGraph { implicit b =>
-      val bcast = Broadcast[ByteString]
+      val balance = Balance[ByteString]
       val merge = Merge[ByteString]
       val empty = Flow.empty[ByteString]
-      UndefinedSource("in") ~> bcast ~> slowEndpoint ~> merge ~> UndefinedSink("out")
-      bcast ~> slowEndpoint ~> merge
-      bcast ~> slowEndpoint ~> merge
+      UndefinedSource("in") ~> balance
+
+      merge ~> UndefinedSink("out")
+
+      1 to 10 map { _ =>
+        balance ~> slowEndpoint ~> merge
+      }
     } toFlow(UndefinedSource("in"), UndefinedSink("out"))
   }
 
