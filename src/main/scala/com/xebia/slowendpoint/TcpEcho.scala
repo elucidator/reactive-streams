@@ -6,10 +6,13 @@ import akka.io.IO
 import akka.pattern.ask
 import akka.stream.FlowMaterializer
 import akka.stream.io.StreamTcp
-import akka.stream.scaladsl.{ Flow, ForeachSink, Sink, Source }
+import akka.stream.scaladsl._
+import akka.stream.scaladsl.FlowGraphImplicits._
 import akka.util.ByteString
+
 //import scala.concurrent.duration._
-import scala.util.{ Failure, Success }
+
+import scala.util.{Failure, Success}
 
 object TcpEcho {
 
@@ -47,11 +50,10 @@ object TcpEcho {
     implicit val sys = system
     import system.dispatcher
     implicit val materializer = FlowMaterializer()
-    val endPointAdres: InetSocketAddress = new InetSocketAddress("127.0.0.1", 11111);
 
     val handler = ForeachSink[StreamTcp.IncomingConnection] { conn =>
       println("Client connected from: " + conn.remoteAddress)
-      conn handleWith getFlow(endPointAdres)
+      conn handleWith getFlow()
     }
 
     val binding = StreamTcp().bind(serverAddress)
@@ -67,13 +69,21 @@ object TcpEcho {
 
   }
 
-  def getFlow(endPointAdres: InetSocketAddress): Flow[ByteString, ByteString] = {
-    Flow[ByteString]
-      .map { i => println(i.utf8String); i}
-      .via(StreamTcp()
+  def getFlow()(implicit as: ActorSystem): Flow[ByteString, ByteString] = {
+    val endPointAdres: InetSocketAddress = new InetSocketAddress("127.0.0.1", 11111);
+
+    val slowEndpoint: Flow[ByteString, ByteString]#Repr[ByteString] =
+      StreamTcp()
         .outgoingConnection(endPointAdres).flow
         .map(b => ByteString(b.utf8String + "\n"))
-      )
+    PartialFlowGraph { implicit b =>
+      val bcast = Broadcast[ByteString]
+      val merge = Merge[ByteString]
+      val empty = Flow.empty[ByteString]
+      UndefinedSource("in") ~> bcast ~> slowEndpoint ~> merge ~> UndefinedSink("out")
+      bcast ~> slowEndpoint ~> merge
+      bcast ~> slowEndpoint ~> merge
+    } toFlow(UndefinedSource("in"), UndefinedSink("out"))
   }
 
   def client(system: ActorSystem, serverAddress: InetSocketAddress): Unit = {
@@ -84,7 +94,7 @@ object TcpEcho {
     val testInput = ('a' to 'z').map(ByteString(_))
 
     val result = Source(testInput).via(StreamTcp().outgoingConnection(serverAddress).flow).
-      fold(ByteString.empty) { (acc, in) ⇒ acc ++ in }
+      fold(ByteString.empty) { (acc, in) ⇒ acc ++ in}
 
     result.onComplete {
       case Success(result) =>
