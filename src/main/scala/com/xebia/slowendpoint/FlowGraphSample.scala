@@ -11,6 +11,9 @@ import akka.stream.FlowMaterializer
 import akka.actor.ActorSystem
 
 object FlowGraphSample extends App {
+  implicit val actorSystem = ActorSystem()
+  implicit val materializer = FlowMaterializer()
+
   val bcast = Broadcast[String]
   val merge = Merge[String]
   val in1 = IterableSource(List("a", "b", "c"))
@@ -18,8 +21,6 @@ object FlowGraphSample extends App {
 
   val flow: Flow[String, String] = Flow[String].map(_.toUpperCase)
 
-  implicit val actorSystem = ActorSystem()
-  implicit val materializer = FlowMaterializer()
   println("====================== flow directly ==============================:");
   flow.runWith(in1, out1)
 
@@ -46,6 +47,7 @@ object FlowGraphSample extends App {
   }.toFlow(UndefinedSource("no1"), UndefinedSink("n2"))
 
   partialFlow.runWith(in1, out1)
+
   actorSystem.shutdown
 
 }
