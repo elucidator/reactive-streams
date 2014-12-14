@@ -53,7 +53,8 @@ class SimpleSocketClient(val host: String = "localhost", val port: Int = 11111) 
       })
       val in = new BufferedReader(new InputStreamReader(Channels.newInputStream(asyncSocketChannel), "utf-8"))
       1 to times foreach (_ => {
-//        println("reading: " + in.readLine())
+        val line = in.readLine()
+//        println("reading: " + line)
       })
     } catch {
       case e: Throwable ⇒
