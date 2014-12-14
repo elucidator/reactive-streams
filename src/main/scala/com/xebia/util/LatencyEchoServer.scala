@@ -1,6 +1,7 @@
 package com.xebia.util
 
 import java.net.InetSocketAddress
+import java.util.regex.Pattern
 import akka.actor._
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
@@ -35,6 +36,7 @@ class EchoService(endpoint: InetSocketAddress, delay: Option[Int]) extends Actor
   }
 
 }
+
 object EchoConnectionHandler {
   def props(remote: InetSocketAddress, connection: ActorRef, delay: Option[Int]): Props =
     Props(new EchoConnectionHandler(remote, connection, delay))
@@ -44,6 +46,7 @@ class EchoConnectionHandler(remote: InetSocketAddress, connection: ActorRef, del
   import context.system
   import context.dispatcher
   import scala.concurrent.duration._
+
   var counter = 0
 
   // We need to know when the connection dies without sending a `Tcp.ConnectionClosed`
@@ -60,9 +63,12 @@ class EchoConnectionHandler(remote: InetSocketAddress, connection: ActorRef, del
         case "reset" =>
           counter = 0
           sender ! Tcp.Write(ByteString(s"$counter"))
-        case _ =>
+        case multiline if multiline.contains("\n") =>
+          multiline.split("\n").foreach(singleline =>
+            self.forward(Tcp.Received(ByteString(singleline))))
+        case singleline =>
           counter += 1
-          replyHandler(s"$counter: $text\n", sender())
+          replyHandler(s"$counter: $singleline\n", sender())
       }
     case _: Tcp.ConnectionClosed =>
       println(s"Stopping, because connection for remote address $remote closed")
