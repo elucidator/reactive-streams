@@ -56,11 +56,11 @@ class SimpleSocketClient(val host: String = "localhost", val port: Int = 11111) 
       })
     } catch {
       case e: Throwable ⇒
-        println(e.getClass().getName() + " " + e.getMessage())
+        println(e.getClass.getName + " " + e.getMessage)
         throw e
     }
   }
 
-  def close() = asyncSocketChannel.close
+  def close() = asyncSocketChannel.close()
 
 }

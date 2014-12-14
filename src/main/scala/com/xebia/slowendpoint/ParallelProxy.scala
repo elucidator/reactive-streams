@@ -2,8 +2,6 @@ package com.xebia.slowendpoint
 
 import java.net.InetSocketAddress
 import akka.actor.ActorSystem
-import akka.io.IO
-import akka.pattern.ask
 import akka.stream.FlowMaterializer
 import akka.stream.io.StreamTcp
 import akka.stream.scaladsl._

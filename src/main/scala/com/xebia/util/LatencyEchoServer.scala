@@ -20,8 +20,8 @@ class EchoThread(socket: Socket, threadcount: Int) extends Thread {
   override def run(): Unit = {
     println(s"Remote address $socket connected")
 
-    val out = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), "utf-8"), true)
-    val in = new BufferedReader(new InputStreamReader(socket.getInputStream(), "utf-8"))
+    val out = new PrintWriter(new OutputStreamWriter(socket.getOutputStream, "utf-8"), true)
+    val in = new BufferedReader(new InputStreamReader(socket.getInputStream, "utf-8"))
 
     var line: String = null
     do {
