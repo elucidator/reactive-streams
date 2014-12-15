@@ -3,7 +3,7 @@ package com.xebia.util
 import java.io.{PrintWriter, OutputStreamWriter, BufferedReader, InputStreamReader}
 import java.net.{Socket, ServerSocket}
 
-object LatencyEchoServer extends App {
+object SyncLatencyEchoServer extends App {
   private val serverSocket: ServerSocket = new ServerSocket(11111)
   var threadcount = 0
   while (true) {
