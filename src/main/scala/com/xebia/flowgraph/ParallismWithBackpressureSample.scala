@@ -33,7 +33,7 @@ object ParallismWithBackpressureSample extends App {
   val delay = Option(1000)
   val numberOfConnections = 2
 
-  val sys1 = SlowEndpointServer.init(endpointHost, endpointPort, delay)
+  val sys1 = LatencyEndpointServer.init(endpointHost, endpointPort, delay)
   val sys2 = ParallelProxyServer.init(proxyHost, proxyPort, endpointHost, endpointPort, numberOfConnections)
   BlockingSocketClient.run(proxyHost, proxyPort, msg, messageCount)
 
@@ -142,7 +142,7 @@ class BlockingSocketClient(val serverAddress: InetSocketAddress, msgCount: Int) 
 
 }
 //====================================== SLOW ENDPOINT ============================================//
-object SlowEndpointServer {
+object LatencyEndpointServer {
 
   def init(host: String = "localhost", port: Int = 11111, delay: Option[Int]): ActorSystem = {
     println(s"============ Delay is: ${delay.map(_.toString).getOrElse("No Delay")}")
