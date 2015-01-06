@@ -36,8 +36,6 @@ object ParallismWithBackpressureSample extends App {
   val sys1 = LatencyEndpointServer.init(endpointHost, endpointPort, delay)
   val sys2 = ParallelProxyServer.init(proxyHost, proxyPort, endpointHost, endpointPort, numberOfConnections)
   BlockingSocketClient.run(proxyHost, proxyPort, msg, messageCount)
-
-  io.StdIn.readLine(s"Hit ENTER to exit ...${System.getProperty("line.separator")}")
   sys1.shutdown()
   sys2.shutdown()
 
@@ -60,7 +58,11 @@ class ParallelProxyServer(serverAddress: InetSocketAddress, endPointAdres: InetS
     implicit val materializer = FlowMaterializer()
     val handler = ForeachSink[StreamTcp.IncomingConnection] { conn =>
       println("Client connected from: " + conn.remoteAddress)
-      conn handleWith getFlow()
+      //one-to-one
+      //conn handleWith(StreamTcp().outgoingConnection(endPointAdres).flow) 
+      
+      //fan-out
+      conn handleWith parallelFlow()
     }
 
     val binding = StreamTcp().bind(serverAddress)
@@ -75,7 +77,7 @@ class ParallelProxyServer(serverAddress: InetSocketAddress, endPointAdres: InetS
     }
   }
 
-  private def getFlow(): Flow[ByteString, ByteString] = {
+  private def parallelFlow(): Flow[ByteString, ByteString] = {
     PartialFlowGraph { implicit b =>
       val balance = Balance[ByteString]
       val merge = Merge[ByteString]
