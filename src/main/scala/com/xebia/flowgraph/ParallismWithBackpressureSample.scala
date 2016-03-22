@@ -1,15 +1,23 @@
 package com.xebia.flowgraph
 
 import java.net.InetSocketAddress
+
 import akka.actor._
 import akka.util.ByteString
 import java.net.InetSocketAddress
+
+import akka.io.IO
+import akka.io.Tcp.Bind
 import akka.stream.FlowMaterializer
 import akka.stream.io.StreamTcp
 import akka.stream.scaladsl._
 import akka.stream.scaladsl.FlowGraphImplicits._
-import scala.util.{ Failure, Success }
-import akka.stream.OverflowStrategy
+import akka.stream.scaladsl.Tcp.{IncomingConnection, ServerBinding}
+
+import scala.util.{Failure, Success}
+import akka.stream.{ActorMaterializer, OverflowStrategy}
+
+import scala.concurrent.Future
 
 object ParallismWithBackpressureSample extends App {
   val msg = s"Some l${"o" * 400}g message"
@@ -43,8 +51,8 @@ class ParallelProxyServer(serverAddress: InetSocketAddress, endPointAdres: InetS
   import system.dispatcher
 
   def init() = {
-    implicit val materializer = FlowMaterializer()
-    val handler = ForeachSink[StreamTcp.IncomingConnection] { conn =>
+    implicit val materializer = ActorMaterializer()
+    val handler = Sink.foreach[Tcp.IncomingConnection] { conn =>
       println("Client connected from: " + conn.remoteAddress)
       //one-to-one
       //conn handleWith(StreamTcp().outgoingConnection(endPointAdres).flow) 
@@ -53,10 +61,11 @@ class ParallelProxyServer(serverAddress: InetSocketAddress, endPointAdres: InetS
       conn handleWith parallelFlow()
     }
 
-    val binding = StreamTcp().bind(serverAddress)
-    val materializedServer = binding.connections.to(handler).run()
+    val binding: Source[IncomingConnection, Future[ServerBinding]] = Tcp().bind(serverAddress.getHostName, serverAddress.getPort)
 
-    binding.localAddress(materializedServer).onComplete {
+    val materializedServer = binding.to(handler).run()
+
+    binding.(materializedServer).onComplete {
       case Success(address) =>
         println("Server started, listening on: " + address)
       case Failure(e) =>
@@ -65,7 +74,7 @@ class ParallelProxyServer(serverAddress: InetSocketAddress, endPointAdres: InetS
     }
   }
 
-  private def parallelFlow(): Flow[ByteString, ByteString] = {
+  private def parallelFlow(): Flow[ByteString, ByteString, Nothing] = {
     PartialFlowGraph { implicit b =>
       val balance = Balance[ByteString]
       val merge = Merge[ByteString]
