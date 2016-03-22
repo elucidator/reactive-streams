@@ -6,6 +6,7 @@ import akka.actor._
 import akka.util.ByteString
 import java.net.InetSocketAddress
 
+import akka.Done
 import akka.io.IO
 import akka.io.Tcp.Bind
 import akka.stream.FlowMaterializer
@@ -48,11 +49,10 @@ object ParallelProxyServer {
 class ParallelProxyServer(serverAddress: InetSocketAddress, endPointAdres: InetSocketAddress, val numberOfConnections: Int)(implicit system: ActorSystem) {
 
   println(s"=========== Number of endpoint connections: $numberOfConnections  ============")
-  import system.dispatcher
 
   def init() = {
     implicit val materializer = ActorMaterializer()
-    val handler = Sink.foreach[Tcp.IncomingConnection] { conn =>
+    val handler: Sink[IncomingConnection, Future[Done]] = Sink.foreach[Tcp.IncomingConnection] { conn =>
       println("Client connected from: " + conn.remoteAddress)
       //one-to-one
       //conn handleWith(StreamTcp().outgoingConnection(endPointAdres).flow) 
@@ -63,18 +63,18 @@ class ParallelProxyServer(serverAddress: InetSocketAddress, endPointAdres: InetS
 
     val binding: Source[IncomingConnection, Future[ServerBinding]] = Tcp().bind(serverAddress.getHostName, serverAddress.getPort)
 
-    val materializedServer = binding.to(handler).run()
+    val materializedServer: Future[ServerBinding] = binding.to(handler).run()
 
     binding.(materializedServer).onComplete {
       case Success(address) =>
         println("Server started, listening on: " + address)
       case Failure(e) =>
         println(s"Server could not bind to $serverAddress: ${e.getMessage}")
-        system.shutdown()
+        system.terminate()
     }
   }
 
-  private def parallelFlow(): Flow[ByteString, ByteString, Nothing] = {
+  private def parallelFlow(): Flow[ByteString, ByteString, _] = {
     PartialFlowGraph { implicit b =>
       val balance = Balance[ByteString]
       val merge = Merge[ByteString]
