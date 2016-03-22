@@ -19,14 +19,14 @@ scalacOptions := Seq("-encoding", "utf8",
                      "-Ywarn-unused",
                      "-Ywarn-unused-import")
 
-val akkaVersion = "2.3.7"
+val akkaVersion = "2.4.2"
 val sprayVersion = "1.3.2"
 
 libraryDependencies ++= Seq(
     "com.typesafe.akka"         %% "akka-actor"                     % akkaVersion,
     "com.typesafe.akka"         %% "akka-slf4j"                     % akkaVersion,
-    "com.typesafe.akka" 	    %% "akka-persistence-experimental"  % akkaVersion,
-    "com.typesafe.akka"		    %% "akka-stream-experimental" 		% "1.0-M1" withSources(),
+    "com.typesafe.akka" 	      %% "akka-persistence"               % akkaVersion,
+    "com.typesafe.akka"		      %% "akka-stream" 		                % akkaVersion,
     "com.typesafe.akka"         %% "akka-cluster"                   % akkaVersion,
     "com.typesafe.akka"         %% "akka-contrib"                   % akkaVersion,
     "io.spray"                  %% "spray-can"                      % sprayVersion,
