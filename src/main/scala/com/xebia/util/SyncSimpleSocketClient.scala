@@ -18,7 +18,7 @@ object SyncSocketClientTester extends App {
     println(s"Sending $to messages:")
     println(s"${"=" * (to / snapshotInterval)}")
     val (elapsed, _) = measure {
-      1 to to foreach { i =>
+      1 to to foreach { i ⇒
         tester.sendAndForget(s"$i$msg")
         counter += 1
         if (counter % snapshotInterval == 0) print(".")

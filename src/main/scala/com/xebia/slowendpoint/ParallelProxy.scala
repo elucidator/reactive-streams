@@ -1,12 +1,15 @@
 package com.xebia.slowendpoint
 
 import java.net.InetSocketAddress
+
 import akka.actor.ActorSystem
-import akka.stream.FlowMaterializer
-import akka.stream.io.StreamTcp
+import akka.stream.scaladsl.Tcp.ServerBinding
 import akka.stream.scaladsl._
-import akka.stream.scaladsl.FlowGraphImplicits._
+import akka.stream.{ActorMaterializer, FlowShape}
 import akka.util.ByteString
+
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.util.{Failure, Success}
 
@@ -23,23 +26,22 @@ object ParallelProxy {
 
   def server(system: ActorSystem, serverAddress: InetSocketAddress): Unit = {
     implicit val sys = system
-    import system.dispatcher
-    implicit val materializer = FlowMaterializer()
+    implicit val materializer = ActorMaterializer()
 
-    val handler = ForeachSink[StreamTcp.IncomingConnection] { conn =>
+    val handler = Sink.foreach[Tcp.IncomingConnection] { conn ⇒
       println("Client connected from: " + conn.remoteAddress)
       conn handleWith getFlow()
     }
 
-    val binding = StreamTcp().bind(serverAddress)
-    val materializedServer = binding.connections.to(handler).run()
+    val binding = Tcp().bind(serverAddress.getHostString, serverAddress.getPort)
+    val materializedServer: Future[ServerBinding] = binding.to(handler).run()
 
-    binding.localAddress(materializedServer).onComplete {
-      case Success(address) =>
-        println("Server started, listening on: " + address)
-      case Failure(e) =>
+    materializedServer.onComplete {
+      case Success(serverBinding) ⇒
+        println("Server started, listening on: " + serverBinding.localAddress)
+      case Failure(e) ⇒
         println(s"Server could not bind to $serverAddress: ${e.getMessage}")
-        system.shutdown()
+        system.terminate()
     }
   }
 
@@ -47,17 +49,18 @@ object ParallelProxy {
 
   private val numberOfConnections: Int = 20
 
-  def getFlow()(implicit as: ActorSystem): Flow[ByteString, ByteString] = {
-    PartialFlowGraph { implicit b =>
-      val balance = Balance[ByteString]
-      val merge = Merge[ByteString]
-      UndefinedSource("in") ~> balance
+  def getFlow()(implicit as: ActorSystem) = {
+    Flow.fromGraph(GraphDSL.create() { implicit b ⇒
+      import GraphDSL.Implicits._
 
-      1 to numberOfConnections map { _ =>
-        balance ~> StreamTcp().outgoingConnection(endPointAdres).flow ~> merge
+      val balance = b.add(Balance[ByteString](numberOfConnections))
+      val merge = b.add(Merge[ByteString](numberOfConnections))
+
+      1 to numberOfConnections map { _ ⇒
+        balance ~> Tcp().outgoingConnection(endPointAdres) ~> merge
       }
 
-      merge ~> UndefinedSink("out")
-    } toFlow(UndefinedSource("in"), UndefinedSink("out"))
+      FlowShape(balance.in, merge.out)
+    })
   }
 }

@@ -32,7 +32,7 @@ object LatencyEndpointServer {
     import context.system
     IO(Tcp) ! Tcp.Bind(self, endpoint)
     override def receive: Receive = {
-      case Tcp.Connected(remote, _) =>
+      case Tcp.Connected(remote, _) ⇒
         println(s"Remote address $remote connected")
         sender ! Tcp.Register(context.actorOf(EchoConnectionHandler.props(remote, sender, delay)), keepOpenOnPeerClosed = true)
     }
@@ -52,26 +52,26 @@ object LatencyEndpointServer {
 
     override def receive: Receive = doReceive(replyHandler)
 
-    private def doReceive(replyHandler: (String, ActorRef, ActorRef) => Unit): Receive = {
-      case Tcp.Received(data) =>
+    private def doReceive(replyHandler: (String, ActorRef, ActorRef) ⇒ Unit): Receive = {
+      case Tcp.Received(data) ⇒
         val text = data.utf8String.trim
         text match {
-          case "reset" =>
+          case "reset" ⇒
             sender ! Tcp.Write(ByteString(s"${counter = 0; counter}"))
-          case "close" => context.stop(self)
-          case _ =>
+          case "close" ⇒ context.stop(self)
+          case _ ⇒
             replyHandler(s"${counter += 1; counter}: $text\n", sender(), connection)
         }
-      case _: Tcp.ConnectionClosed =>
+      case _: Tcp.ConnectionClosed ⇒
         println(s"Stopping, because connection for remote address $remote closed")
         context.stop(self)
-      case Terminated(`connection`) =>
+      case Terminated(`connection`) ⇒
         println(s"Stopping, because connection for remote address $remote died")
         context.stop(self)
     }
 
     //delays when delay is set
-    private def replyHandler(text: String, actorRef: ActorRef, connection: ActorRef): Unit = delayCfg.map { delay =>
+    private def replyHandler(text: String, actorRef: ActorRef, connection: ActorRef): Unit = delayCfg.map { delay ⇒
       connection ! Tcp.SuspendReading
       context.system.scheduler.scheduleOnce(delay milliseconds) {
         actorRef ! Tcp.Write(ByteString(text))

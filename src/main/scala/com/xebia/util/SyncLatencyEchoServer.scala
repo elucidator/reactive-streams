@@ -1,7 +1,7 @@
 package com.xebia.util
 
-import java.io.{PrintWriter, OutputStreamWriter, BufferedReader, InputStreamReader}
-import java.net.{Socket, ServerSocket}
+import java.io.{ PrintWriter, OutputStreamWriter, BufferedReader, InputStreamReader }
+import java.net.{ Socket, ServerSocket }
 
 object SyncLatencyEchoServer extends App {
   private val serverSocket: ServerSocket = new ServerSocket(11111)

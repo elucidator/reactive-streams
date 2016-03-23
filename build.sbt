@@ -38,7 +38,7 @@ libraryDependencies ++= Seq(
     "io.spray"                  %% "spray-testkit"                  % sprayVersion   % "test",
     "org.scalatest"             %% "scalatest"                      % "2.2.2"        % "test",
     "commons-io"                %  "commons-io"                     % "2.4"          % "test",
-	"joda-time"                 %  "joda-time"                      % "2.5",
+	  "joda-time"                 %  "joda-time"                      % "2.5",
   	"org.joda"                  %  "joda-convert"                   % "1.7"
 )
 

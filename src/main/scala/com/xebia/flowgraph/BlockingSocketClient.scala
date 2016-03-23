@@ -5,10 +5,9 @@ import java.io.PrintWriter
 import java.net.InetSocketAddress
 import java.net.Socket
 
-
 object BlockingSocketClient {
 
-  def run(host: String, port: Int, msg:String, msgCount: Int) = {
+  def run(host: String, port: Int, msg: String, msgCount: Int) = {
     Thread.sleep(3000)
     new BlockingSocketClient(new InetSocketAddress(host, port), msgCount).sendAndForgetBlocking(msg)
   }
@@ -29,7 +28,7 @@ class BlockingSocketClient(val serverAddress: InetSocketAddress, msgCount: Int) 
     println(s"Sending $msgCount messages:")
     println(s"${"=" * (msgCount / snapshotInterval)}")
     val (elapsed, _) = measure {
-      1 to msgCount foreach { i =>
+      1 to msgCount foreach { i ⇒
         writeBlockingMsg(s"$i$msg")
         counter += 1
         if (counter % snapshotInterval == 0) print(".")

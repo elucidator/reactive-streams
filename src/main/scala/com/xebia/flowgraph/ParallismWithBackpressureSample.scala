@@ -9,16 +9,14 @@ import java.net.InetSocketAddress
 import akka.Done
 import akka.io.IO
 import akka.io.Tcp.Bind
-import akka.stream.FlowMaterializer
-import akka.stream.io.StreamTcp
+import akka.stream._
 import akka.stream.scaladsl._
-import akka.stream.scaladsl.FlowGraphImplicits._
 import akka.stream.scaladsl.Tcp.{IncomingConnection, ServerBinding}
 
 import scala.util.{Failure, Success}
-import akka.stream.{ActorMaterializer, OverflowStrategy}
 
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object ParallismWithBackpressureSample extends App {
   val msg = s"Some l${"o" * 400}g message"
@@ -65,7 +63,7 @@ class ParallelProxyServer(serverAddress: InetSocketAddress, endPointAdres: InetS
 
     val materializedServer: Future[ServerBinding] = binding.to(handler).run()
 
-    binding.(materializedServer).onComplete {
+    materializedServer.onComplete {
       case Success(address) =>
         println("Server started, listening on: " + address)
       case Failure(e) =>
@@ -75,17 +73,18 @@ class ParallelProxyServer(serverAddress: InetSocketAddress, endPointAdres: InetS
   }
 
   private def parallelFlow(): Flow[ByteString, ByteString, _] = {
-    PartialFlowGraph { implicit b =>
-      val balance = Balance[ByteString]
-      val merge = Merge[ByteString]
-      UndefinedSource("in") ~> balance
+    Flow.fromGraph(GraphDSL.create() { implicit b =>
+      import GraphDSL.Implicits._
+
+      val balance = b.add(Balance[ByteString](numberOfConnections))
+      val merge   = b.add(Merge[ByteString](numberOfConnections))
 
       1 to numberOfConnections map { _ =>
-        balance ~> StreamTcp().outgoingConnection(endPointAdres).flow ~> merge
+        balance ~> Tcp().outgoingConnection(endPointAdres) ~> merge
       }
 
-      merge ~> UndefinedSink("out")
-    } toFlow (UndefinedSource("in"), UndefinedSink("out"))
+      FlowShape(balance.in, merge.out)
+    })
   }
 
 }

@@ -2,18 +2,15 @@ package com.xebia.slowendpoint
 
 import java.net.InetSocketAddress
 import akka.actor.ActorSystem
-import akka.stream.FlowMaterializer
-import akka.stream.scaladsl.Source
+import akka.stream.{ActorMaterializer}
+import akka.stream.scaladsl._
 import scala.concurrent.Await
-import akka.stream.io.StreamTcp
-import akka.stream.scaladsl.IterableSource
-import akka.stream.scaladsl.ForeachSink
 import scala.util.Try
 import akka.util.ByteString
 object FanOutByGroup {
   val endPointAdres: InetSocketAddress = new InetSocketAddress("127.0.0.1", 11111);
 
-  val to = 5000000
+  val veryHighNumber = 5000000
   val messages = List("[DEBUG] debug statement", "[INFO] statement", "[WARN] statement", "[ERROR] statement")
   val LoglevelPattern = """.*\[(DEBUG|INFO|WARN|ERROR)\].*""".r
 
@@ -22,34 +19,35 @@ object FanOutByGroup {
     implicit val system = ActorSystem("Sys")
     // execution context
     import system.dispatcher
-    implicit val materializer = FlowMaterializer()
+    implicit val materializer = ActorMaterializer()
 
-    //Note: A single group also does not work as expected. After n-amount of elements (~ 100000) no more elements are sent. A Bug? 
+    //Note: A single group also does not work as expected. After n-amount of elements (~ 100000) no more elements are sent. A Bug?
     def sendSingleGroup = {
-      val source = IterableSource(1 to to map (i => messages(i % 4)))
-        .map(line => ByteString.fromString(line + "\n"))
+      val source = Source(1 to veryHighNumber map (i ⇒ messages(i % 4)))
+        .map(line ⇒ ByteString.fromString(line + "\n"))
 
-      StreamTcp().outgoingConnection(endPointAdres).flow
-        .runWith(source, new MeasureSink("1", to).measureSink)
+      Tcp().outgoingConnection(endPointAdres)
+        .runWith(source, new MeasureSink("1", veryHighNumber).measureSink)
 
     }
 
     //NOTE: multiple groups do not work as expected either . After about ~100000 messages no more messages are sent. A Bug?
-    def multipleGroups = {
-      IterableSource(1 to to map (i => messages(i % 4)))
-        .groupBy {
-          case LoglevelPattern(group) => group
-          case other => other
-        }
-        .foreach {
-          case (group, stringSource) =>
-            println(s"Group: $group")
-            StreamTcp().outgoingConnection(endPointAdres).flow
-              .runWith(stringSource.map(line => ByteString.fromString(line + "\n")), new MeasureSink(group, to).measureSink)
-        }
-    }
-    //test with:
-    multipleGroups
+    // TODO RDJ
+//    def multipleGroups = {
+//      Source(1 to veryHighNumber map (i ⇒ messages(i % 4)))
+//        .groupBy(4, {
+//          case LoglevelPattern(group) ⇒ group
+//          case other                  ⇒ other
+//        })
+//        .foreach {
+//          case (group, stringSource) ⇒
+//            println(s"Group: $group")
+//            Tcp().outgoingConnection(endPointAdres)
+//              .runWith(stringSource.map(line ⇒ ByteString.fromString(line + "\n")), new MeasureSink(group, veryHighNumber).measureSink)
+//        }
+//    }
+////    test with:
+//    multipleGroups
   }
 
 }
@@ -57,7 +55,7 @@ object FanOutByGroup {
 class MeasureSink(val group: Any, val to: Int) {
   val start = System.currentTimeMillis()
   var counter = 0
-  val measureSink = ForeachSink((i: ByteString) => {
+  val measureSink = Sink.foreach((i: ByteString) ⇒ {
     counter += 1
     if (counter % 100 == 0) printTPS
     if (counter >= to) printTPS
@@ -69,6 +67,4 @@ class MeasureSink(val group: Any, val to: Int) {
   }
 
 }
-
-
 

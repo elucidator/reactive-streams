@@ -10,7 +10,7 @@ import akka.actor.ActorSystem
 import akka.actor.Props
 import org.reactivestreams.Subscriber
 import akka.stream.scaladsl._
-import akka.stream.FlowMaterializer
+import akka.stream.{ActorMaterializer, Materializer}
 
 class IntPublisher extends Actor with ActorPublisher[Int] {
   val random = scala.util.Random
@@ -42,7 +42,7 @@ object PublishSubscribe extends App {
   // ActorSystem represents the "engine" we run in, including threading configuration and concurrency semantics.
   implicit val system = ActorSystem()
 
-  implicit val materializer = FlowMaterializer()
+  implicit val materializer = ActorMaterializer()
 
   val circleProducer = system.actorOf(Props[IntPublisher])
   val displaySubscriber = system.actorOf(Props[PrintSubscriber])
@@ -50,6 +50,6 @@ object PublishSubscribe extends App {
   //    ActorPublisher(circleProducer).subscribe( ActorSubscriber(displaySubscriber))
 
   val subscriber: Subscriber[Any] = ActorSubscriber(displaySubscriber)
-  Source(ActorPublisher(circleProducer)).runWith(Sink(subscriber))
+  Source.fromPublisher(ActorPublisher(circleProducer)).runWith(Sink.fromSubscriber(subscriber))
 
 }
