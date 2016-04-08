@@ -9,6 +9,7 @@ object BlockingSocketClient {
 
   def run(host: String, port: Int, msg: String, msgCount: Int) = {
     Thread.sleep(3000)
+    println(s"message size => ${msg.length}")
     new BlockingSocketClient(new InetSocketAddress(host, port), msgCount).sendAndForgetBlocking(msg)
   }
 }
@@ -19,6 +20,8 @@ class BlockingSocketClient(val serverAddress: InetSocketAddress, msgCount: Int) 
     val socket = new Socket()
     socket.setSoTimeout(1000)
     socket.connect(serverAddress)
+    //socket.setSendBufferSize(1)
+    println(s"Send buffer size: ${socket.getSendBufferSize}")
     socket
   }
 
@@ -40,7 +43,7 @@ class BlockingSocketClient(val serverAddress: InetSocketAddress, msgCount: Int) 
   def close() = serverSocket.close
 
   private def writeBlockingMsg(msg: String): Unit = {
-    val out = new PrintWriter(new OutputStreamWriter(serverSocket.getOutputStream(), "utf-8"), true);
+    val out = new PrintWriter(new OutputStreamWriter(serverSocket.getOutputStream(), "utf-8"), true)
     out.println(msg)
     out.flush()
   }

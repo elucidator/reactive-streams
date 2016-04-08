@@ -11,14 +11,16 @@ import akka.io.IO
 import akka.actor.ActorRef
 import akka.io.Tcp
 
-object LatencyEndpointServer {
+object LatencyEndpointReceiver {
+
+
 
   def init(host: String = "localhost", port: Int = 11111, delay: Option[Int]): ActorSystem = {
     println(s"============ Delay is: ${delay.map(_.toString).getOrElse("No Delay")}")
 
-    val system = ActorSystem("echo-service-system")
-    val listenTo = new InetSocketAddress(host, port)
-    system.actorOf(EchoService.props(listenTo, delay), "echo-service")
+    val system = ActorSystem("latency-end-point-receiver")
+    val listenTo: InetSocketAddress = new InetSocketAddress(host, port)
+    system.actorOf(EchoService.props(listenTo, delay), "latency-receiver")
     system
 
   }
@@ -33,6 +35,7 @@ object LatencyEndpointServer {
     IO(Tcp) ! Tcp.Bind(self, endpoint)
     override def receive: Receive = {
       case Tcp.Connected(remote, _) ⇒
+
         println(s"Remote address $remote connected")
         sender ! Tcp.Register(context.actorOf(EchoConnectionHandler.props(remote, sender, delay)), keepOpenOnPeerClosed = true)
     }
@@ -50,16 +53,19 @@ object LatencyEndpointServer {
     var counter = 0
     context.watch(connection)
 
+
     override def receive: Receive = doReceive(replyHandler)
 
     private def doReceive(replyHandler: (String, ActorRef, ActorRef) ⇒ Unit): Receive = {
+
       case Tcp.Received(data) ⇒
-        val text = data.utf8String.trim
+        val text = data.utf8String
         text match {
           case "reset" ⇒
             sender ! Tcp.Write(ByteString(s"${counter = 0; counter}"))
           case "close" ⇒ context.stop(self)
           case _ ⇒
+            println(s"Counter $counter ${connection.path} ${text.substring(0, 25)}")
             replyHandler(s"${counter += 1; counter}: $text\n", sender(), connection)
         }
       case _: Tcp.ConnectionClosed ⇒
@@ -74,11 +80,11 @@ object LatencyEndpointServer {
     private def replyHandler(text: String, actorRef: ActorRef, connection: ActorRef): Unit = delayCfg.map { delay ⇒
       connection ! Tcp.SuspendReading
       context.system.scheduler.scheduleOnce(delay milliseconds) {
-        actorRef ! Tcp.Write(ByteString(text))
+        actorRef ! Tcp.Write(ByteString(s"ACK (${text.length})\n"))
         connection ! Tcp.ResumeReading
       }
-    } getOrElse {
-      actorRef ! Tcp.Write(ByteString(text))
+    //} getOrElse {
+      //actorRef ! Tcp.Write(ByteString(text))
     }
 
   }
