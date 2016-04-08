@@ -10,10 +10,11 @@ import akka.stream.scaladsl._
 import akka.util.ByteString
 import akka.actor.{ActorSystem, Cancellable}
 import akka.pattern.ask
-import akka.stream.ActorMaterializer
+import akka.stream.{ActorMaterializer, ThrottleMode}
 import akka.stream.scaladsl.{Flow, Sink, Source, Tcp}
 import akka.util.ByteString
 
+import scala.collection.immutable.Iterable
 import scala.concurrent.{Await, Future, duration}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
@@ -56,30 +57,27 @@ object LatencyLineEndpointReceiver {
     val ticks = Source.tick(0.seconds, 10.milliseconds, ())
 
 
-
-    val averages = Flow[ByteString]
+    var cnt = 0;
+    val acking = Flow[ByteString]
       .via(Framing.delimiter(
         ByteString("\n"),
         maximumFrameLength = Int.MaxValue,
         allowTruncation = true))
-      //TODO Some random delay here
-
+      .throttle(1, 10.millis, 1, ThrottleMode.shaping)
       .map(b => {
-      //          println(s"Received ${b.length} bytes")
-      //        Thread.sleep(100)
-      //        delayed(system)
+        cnt+=1
+        if (cnt % 20 == 0)
+                println(s"Received $cnt messages")
       ByteString("ACK\n")
     })
 
-    val flow: Source[ByteString, NotUsed] = Source.fromGraph(GraphDSL.create() { implicit builder =>
-      import GraphDSL.Implicits._
-      val zip = builder.add(ZipWith((av: ByteString, tick: Unit) => av))
+//      .throttle(1, 100.millis, 1, ThrottleMode.shaping)
+//      .map(b => {
+//        println(s"delayed ${Thread.currentThread().getId}")
+//        b
+//      })
 
-      averages ~> zip.in0
-      ticks ~> zip.in1
 
-      SourceShape(zip.out)
-    }
 
     val handler = Sink.foreach[Tcp.IncomingConnection] { conn =>
       println("Client connected from: " + conn.remoteAddress)
@@ -88,7 +86,7 @@ object LatencyLineEndpointReceiver {
 
 
 
-      conn handleWith flow
+      conn handleWith acking
     }
 
     val connections = Tcp().bind(address, port)

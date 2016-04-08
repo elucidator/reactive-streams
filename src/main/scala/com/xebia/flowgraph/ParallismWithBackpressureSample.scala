@@ -30,9 +30,10 @@ object ParallismWithBackpressureSample extends App {
   val proxyPort = 6003
   val endpointHost = "localhost"
   val endpointPort = 11111
-  val messageCount = 5000
+  val messageCount = 1000
   val delay = Option(1000)
-  val numberOfConnections = 1
+  val numberOfConnections = 6
+
 
   //val sys1: ActorSystem = LatencyEndpointReceiver.init(endpointHost, endpointPort, delay)
   val sys1: ActorSystem = LatencyLineEndpointReceiver.init(endpointHost, endpointPort, delay)
