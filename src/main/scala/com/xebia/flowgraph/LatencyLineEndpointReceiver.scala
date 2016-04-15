@@ -65,9 +65,9 @@ object LatencyLineEndpointReceiver {
         allowTruncation = true))
       .throttle(1, 10.millis, 1, ThrottleMode.shaping)
       .map(b => {
-        cnt+=1
-        if (cnt % 20 == 0)
-                println(s"Received $cnt messages")
+//        cnt+=1
+//        if (cnt % 20 == 0)
+//                println(s"Received $cnt messages")
       ByteString("ACK\n")
     })
 

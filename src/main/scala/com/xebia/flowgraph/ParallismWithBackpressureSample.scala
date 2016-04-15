@@ -32,7 +32,7 @@ object ParallismWithBackpressureSample extends App {
   val endpointPort = 11111
   val messageCount = 1000
   val delay = Option(1000)
-  val numberOfConnections = 6
+  val numberOfConnections = 1
 
 
   //val sys1: ActorSystem = LatencyEndpointReceiver.init(endpointHost, endpointPort, delay)
@@ -127,17 +127,12 @@ class ParallelProxyServer(serverAddress: InetSocketAddress, endPointAdres: InetS
       println("Constructing via")
       val y: Flow[ByteString, ByteString, Future[OutgoingConnection]] = tcpOut.via(Framing.delimiter(ByteString("\n"), maximumFrameLength = Int.MaxValue, allowTruncation = true))
         .map(data => {
-//          println(s"<=${data.utf8String} ${data.utf8String.length}")
           Counter.count += 1
-//          println(s"count = ${Counter.count}")
           if (Counter.count == Counter.total) {
             val processingTime = System.currentTimeMillis() - Counter.start - 3000
             println(s"\nI Sent them all ${processingTime} millis, ${Counter.total.toDouble / processingTime * 1000} TPS")
           }
-//          if (Counter.count % 20 == 0) {
-//            print("#")
-//          }
-          //Block when
+
           data
         })
 
